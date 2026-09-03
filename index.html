@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+    <script src="mraid.js"></script>
+    <script>
+      (function () {
+        let mraidIsReady = false;
+        let mraidReadyListenerAttached = false;
+        function trackMraidReadiness(mraid) {
+          if (mraidReadyListenerAttached || !mraid || typeof mraid.addEventListener !== 'function') return;
+          try { mraid.addEventListener('ready', function () { mraidIsReady = true; }); mraidReadyListenerAttached = true; } catch (error) {}
+        }
+        window.trackMraidReadiness = trackMraidReadiness;
+        window.isMraidUsable = function isMraidUsable(mraid) {
+          if (!mraid) return false;
+          trackMraidReadiness(mraid);
+          if (typeof mraid.getState !== 'function') return true;
+          try { const state = mraid.getState(); return state === 'default' || state === 'expanded'; } catch (error) { return mraidIsReady; }
+        };
+        window.handleClickAction = function handleClickAction() {
+          const mraid = window.mraid || {};
+          const clickTarget = window.clickTag || window.clickTag1 || window.clickthrough || window.clickThrough || '';
+          if (typeof mraid.open === 'function' && window.isMraidUsable(mraid)) {
+            try { if (clickTarget) mraid.open(clickTarget); else mraid.open(); return; } catch (error) {}
+          }
+          window.open(clickTarget || 'about:blank', '_blank', 'noopener');
+        };
+        window.waitForMraid = function waitForMraid(init) {
+          let creativeInitialized = false;
+          function start() {
+            if (creativeInitialized) return;
+            creativeInitialized = true;
+            init();
+          }
+          if (typeof mraid === 'undefined') {
+            start();
+          } else {
+            if (mraid.getState() === "loading") {
+              mraid.addEventListener("ready", start);
+            } else {
+              start();
+            }
+          }
+        };
+      })();
+    </script>
+    <title>Kelpie</title>
+    <style>html,body,#game,canvas{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;touch-action:none}</style>
+  </head>
+  <body>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
