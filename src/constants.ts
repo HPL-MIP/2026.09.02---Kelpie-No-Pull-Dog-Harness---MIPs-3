@@ -1,6 +1,7 @@
 export const DESIGN_WIDTH = 1080;
 export const DESIGN_HEIGHT = 1920;
-export const STORE_URL = 'https://example.com';
+// Leave empty until a final store destination is supplied.
+export const STORE_URL = '';
 
 export const Depth = {
   Background: 0,
