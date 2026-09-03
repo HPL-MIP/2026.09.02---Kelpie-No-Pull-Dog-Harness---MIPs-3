@@ -25,16 +25,36 @@ const devMraidPlaceholder: Plugin = {
   },
 };
 
-async function minifyEndcardHtml(source: string): Promise<string> {
+async function minifyEndcardHtml(source: string, sharedFontDataUrl: string): Promise<string> {
+  const hasDisabledDateOverlay = /const dateTokens\s*=\s*["']\s*["']/.test(source);
+  const dateFontPayload = source.match(/@font-face\s*\{\s*font-family:\s*"SipDateFont";[\s\S]*?url\(([^)]*)\)/i)?.[1];
+  const customFontPayload = source.match(/@font-face\s*\{\s*font-family:\s*"SipCustom1Font";[\s\S]*?url\(([^)]*)\)/i)?.[1];
   let html = source
     .replace(/<script src="mraid\.js"><\/script>\s*/i, '')
     .replace(/\s*<script id="sip-builder-config"[\s\S]*?<\/script>/i, '')
-    .replace(/\s*<style>\s*@media \(orientation: portrait\) \{\s*body \{ background: #fee8e6; \}\s*\}[\s\S]*?<\/style>/i, '')
-    .replace(/\s*<div id="sip-date"><\/div>/i, '')
-    // This supplied end card has its optional date overlay disabled (empty
-    // tokens and no animation), so the associated builder runtime is unused.
-    .replace(/\s*\/\/ --- Overlay animation helpers[^]*?\/\/ --- End dynamic date overlay ---/i, '')
     .replace(/<!--[^]*?-->/g, '');
+
+  // end.html embeds this exact Bricolage font twice. Both overlays can share
+  // SipDateFont, saving the duplicate base64 payload without changing glyphs.
+  if (dateFontPayload && dateFontPayload === customFontPayload) {
+    html = html
+      .replace(/@font-face\s*\{\s*font-family:\s*"SipCustom1Font";[\s\S]*?\}\s*/i, '')
+      .split('"SipCustom1Font"').join('"SipDateFont"');
+    html = html.replace(/@font-face\s*\{\s*font-family:\s*"SipDateFont";[\s\S]*?\}/i, (fontFace) => (
+      fontFace
+        .split(dateFontPayload).join(sharedFontDataUrl)
+        .replace(/format\(["']truetype["']\)/i, 'format("woff2-variations")')
+    ));
+  }
+
+  // The previous supplied end card had no date. Keep this optimization only
+  // for that shape; end.html has an active dynamic date and custom copy.
+  if (hasDisabledDateOverlay) {
+    html = html
+      .replace(/\s*<style>\s*@media \(orientation: portrait\) \{\s*body \{ background: #fee8e6; \}\s*\}[\s\S]*?<\/style>/i, '')
+      .replace(/\s*<div id="sip-date"><\/div>/i, '')
+      .replace(/\s*\/\/ --- Overlay animation helpers[^]*?\/\/ --- End dynamic date overlay ---/i, '');
+  }
 
   html = await replaceAsync(html, /<style>([^]*?)<\/style>/gi, async (_match, css: string) => {
     const result = await transform(css, { loader: 'css', minify: true });
@@ -63,17 +83,51 @@ async function replaceAsync(
 const inlineEndcard: Plugin = {
   name: 'inline-minified-kelpie-endcard',
   resolveId(id) {
-    return id === 'virtual:kelpie-endcard' ? '\0virtual:kelpie-endcard' : null;
+    if (id === 'virtual:kelpie-endcard') return '\0virtual:kelpie-endcard';
+    if (id === 'virtual:kelpie-click-sfx') return '\0virtual:kelpie-click-sfx';
+    return null;
   },
   async load(id) {
-    if (id !== '\0virtual:kelpie-endcard') {
-      return null;
+    if (id === '\0virtual:kelpie-click-sfx') {
+      const click = await readFile(resolve('Assets/Kelpie/sfx/Click.mp3'));
+      const trimmed = trimMp3(click, 20);
+      return `export default ${JSON.stringify(`data:audio/mpeg;base64,${trimmed.toString('base64')}`)};`;
     }
-
-    const source = await readFile(resolve('Assets/Kelpie/endcard.html'), 'utf8');
-    return `export default ${JSON.stringify(await minifyEndcardHtml(source))};`;
+    if (id === '\0virtual:kelpie-endcard') {
+      const source = await readFile(resolve('Assets/Kelpie/end.html'), 'utf8');
+      const font = await readFile(resolve('node_modules/@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2'));
+      const fontDataUrl = `data:font/woff2;base64,${font.toString('base64')}`;
+      return `export default ${JSON.stringify(await minifyEndcardHtml(source, fontDataUrl))};`;
+    }
+    return null;
   },
 };
+
+function trimMp3(source: Buffer, frameLimit: number): Buffer {
+  let offset = source.subarray(0, 3).toString('ascii') === 'ID3'
+    ? 10 + (((source[6] & 0x7f) << 21) | ((source[7] & 0x7f) << 14) | ((source[8] & 0x7f) << 7) | (source[9] & 0x7f))
+    : 0;
+  const start = offset;
+  let frames = 0;
+  while (frames < frameLimit && offset + 4 <= source.length) {
+    const byte1 = source[offset + 1];
+    const byte2 = source[offset + 2];
+    if (source[offset] !== 0xff || (byte1 & 0xe0) !== 0xe0) break;
+    const version = (byte1 >> 3) & 0x03;
+    const layer = (byte1 >> 1) & 0x03;
+    const bitrateIndex = byte2 >> 4;
+    const sampleRateIndex = (byte2 >> 2) & 0x03;
+    if (version === 1 || layer !== 1 || bitrateIndex === 0 || bitrateIndex === 15 || sampleRateIndex === 3) break;
+    const sampleRates = version === 3 ? [44100, 48000, 32000] : version === 2 ? [22050, 24000, 16000] : [11025, 12000, 8000];
+    const bitrates = version === 3 ? [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320] : [0, 8, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 144, 160];
+    const coefficient = version === 3 ? 144000 : 72000;
+    const frameLength = Math.floor((coefficient * bitrates[bitrateIndex]) / sampleRates[sampleRateIndex]) + ((byte2 >> 1) & 1);
+    if (frameLength <= 0 || offset + frameLength > source.length) break;
+    offset += frameLength;
+    frames++;
+  }
+  return source.subarray(start, offset);
+}
 
 export default defineConfig({
   plugins: [inlineEndcard, viteSingleFile(), applovinHtml, devMraidPlaceholder],

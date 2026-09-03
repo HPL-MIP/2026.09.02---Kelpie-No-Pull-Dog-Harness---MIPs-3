@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import '@fontsource-variable/bricolage-grotesque';
+import './fonts.css';
 import { DESIGN_HEIGHT, DESIGN_WIDTH } from './constants';
 import { initMraid } from './networks';
 import { BootScene } from './scenes/BootScene';
@@ -26,6 +26,7 @@ function resize(): void {
 function requestResize(): void { if (!scheduled) { scheduled = true; requestAnimationFrame(resize); } }
 async function boot(): Promise<void> {
   await initMraid();
+  window.setupMraidViewability?.();
   await document.fonts?.ready;
   const parent = document.createElement('div'); parent.id = 'game'; document.body.appendChild(parent);
   game = new Phaser.Game({ type: Phaser.AUTO, parent, transparent: true, scale: { mode: Phaser.Scale.NONE, width: DESIGN_WIDTH, height: DESIGN_HEIGHT }, render: { antialias: true, pixelArt: false }, scene: [BootScene, GameScene] });

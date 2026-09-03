@@ -1,4 +1,3 @@
-import arrows from '../Assets/Kelpie/arrows.png';
 import cta from '../Assets/Kelpie/cta.png';
 import design from '../Assets/Kelpie/design.png';
 import handHint from '../Assets/Kelpie/handhint.png';
@@ -22,11 +21,11 @@ import scene5Text from '../Assets/Kelpie/scene5_text.png';
 import scene5Timer from '../Assets/Kelpie/scene5_timer.png';
 import timerBackground from '../Assets/Kelpie/timer_bg.png';
 import endcardHtml from 'virtual:kelpie-endcard';
-import clickSfx from '../Assets/Kelpie/sfx/Click.mp3';
+import clickSfx from 'virtual:kelpie-click-sfx';
 import endSfx from '../Assets/Kelpie/sfx/end.mp3';
 
 export const Assets = {
-  arrows, cta, design, handHint, leftArrow, logo, rightArrow, scene1Main, scene1Text,
+  cta, design, handHint, leftArrow, logo, rightArrow, scene1Main, scene1Text,
   scene2Main, scene2Text, scene3Main, scene4Icon0, scene4Icon1, scene4Icon2,
   scene4Icon3, scene4Text0, scene4Text1, scene4Text2, scene4Text3,
   scene5Text, scene5Timer, timerBackground,

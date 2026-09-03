@@ -28,7 +28,7 @@ export const CAROUSEL_LAYOUT = {
 } as const;
 
 const IMAGE_SIZE: Record<AssetKey, readonly [number, number]> = {
-  arrows: [988, 93], cta: [551, 155], design: [1080, 187], handHint: [178, 182], leftArrow: [93, 93], logo: [556, 80], rightArrow: [93, 93],
+  cta: [551, 155], design: [1080, 187], handHint: [178, 182], leftArrow: [93, 93], logo: [556, 80], rightArrow: [93, 93],
   scene1Main: [765, 588], scene1Text: [802, 158], scene2Main: [747, 755], scene2Text: [899, 172], scene3Main: [747, 755],
   scene4Icon0: [298, 298], scene4Icon1: [91, 91], scene4Icon2: [101, 101], scene4Icon3: [94, 94], scene4Text0: [647, 77],
   scene4Text1: [437, 90], scene4Text2: [443, 35], scene4Text3: [477, 42], scene5Text: [976, 77],

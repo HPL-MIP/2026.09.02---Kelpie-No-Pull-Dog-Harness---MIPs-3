@@ -5,6 +5,7 @@ declare global {
     mraid?: any;
     trackMraidReadiness?: (mraid: any) => void;
     isMraidUsable?: (mraid: any) => boolean;
+    setupMraidViewability?: () => void;
     handleClickAction?: () => void;
     clickTag?: string; clickTag1?: string; clickthrough?: string; clickThrough?: string;
     gameReady?: () => void; gameStart?: () => void; gameEnd?: () => void; gameClose?: () => void;

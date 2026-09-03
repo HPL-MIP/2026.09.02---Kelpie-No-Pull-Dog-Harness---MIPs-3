@@ -27,11 +27,41 @@
           }
           window.open(clickTarget || 'about:blank', '_blank', 'noopener');
         };
+        let mraidViewable = true;
+        function syncMediaState() {
+          const sync = function (element) {
+            if (!mraidViewable) {
+              element.pause();
+            } else if (element.tagName === 'VIDEO' && element.autoplay) {
+              element.play().catch(function () {});
+            }
+          };
+          document.querySelectorAll('video, audio').forEach(sync);
+          document.querySelectorAll('iframe').forEach(function (frame) {
+            try { frame.contentDocument?.querySelectorAll('video, audio').forEach(sync); } catch (error) {}
+          });
+          window.dispatchEvent(new Event('mraidlifecyclechange'));
+        }
+        window.setupMraidViewability = function setupMraidViewability() {
+          if (typeof mraid === 'undefined') return;
+          function handleViewableChange(viewable) {
+            mraidViewable = Boolean(viewable);
+            syncMediaState();
+          }
+          if (typeof mraid.isViewable === 'function') {
+            try { mraidViewable = Boolean(mraid.isViewable()); } catch (error) { mraidViewable = true; }
+          }
+          if (typeof mraid.addEventListener === 'function') {
+            try { mraid.addEventListener('viewableChange', handleViewableChange); } catch (error) {}
+          }
+          syncMediaState();
+        };
         window.waitForMraid = function waitForMraid(init) {
           let creativeInitialized = false;
           function start() {
             if (creativeInitialized) return;
             creativeInitialized = true;
+            window.setupMraidViewability();
             init();
           }
           if (typeof mraid === 'undefined') {
