@@ -42,6 +42,7 @@ export const CAROUSEL_LAYOUT = {
   },
   slide3: {
     text: { x: 543.5, y: 451 },
+    vs: { x: 539, y: 447 },
     main: { x: 538, y: 977 },
     labelLeft: { x: 311.5, y: 1361 },
     labelRight: { x: 757.5, y: 1359.5 },
@@ -84,6 +85,7 @@ const IMAGE_SIZE: Record<AssetKey, readonly [number, number]> = {
   slide3LabelRight: [143, 45],
   slide3Main: [850, 612],
   slide3Text: [641, 238],
+  slide3Vs: [60, 33],
   slide4Main: [759, 844],
   slide4Text: [714, 287],
   slide5Headline: [641, 113],
@@ -476,6 +478,7 @@ class Slide extends LayoutGroup {
     if (this.index === 2) {
       const layout = CAROUSEL_LAYOUT.slide3;
       this.addImage('slide3Text', layout.text.x, layout.text.y, Depth.Hud);
+      this.addImage('slide3Vs', layout.vs.x, layout.vs.y, Depth.Hud);
       this.addImage('slide3Main', layout.main.x, layout.main.y, Depth.Game);
       this.addImage('slide3LabelLeft', layout.labelLeft.x, layout.labelLeft.y, Depth.Hud);
       this.addImage('slide3LabelRight', layout.labelRight.x, layout.labelRight.y, Depth.Hud);

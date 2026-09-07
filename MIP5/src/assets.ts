@@ -15,6 +15,7 @@ import slide3LabelLeft from '../Assets/Kelpie/slide3_label_left.webp';
 import slide3LabelRight from '../Assets/Kelpie/slide3_label_right.webp';
 import slide3Main from '../Assets/Kelpie/slide3_main.webp';
 import slide3Text from '../Assets/Kelpie/slide3_text.webp';
+import slide3Vs from '../Assets/Kelpie/slide3_vs.webp';
 import slide4Main from '../Assets/Kelpie/slide4_main.webp';
 import slide4Text from '../Assets/Kelpie/slide4_text.webp';
 import slide5Headline from '../Assets/Kelpie/slide5_headline.webp';
@@ -29,7 +30,7 @@ export const Assets = {
   slide1Main, slide1Text,
   slide2IconText, slide2Icons, slide2Main,
   slide3CaptionLeft, slide3CaptionRight, slide3LabelLeft, slide3LabelRight,
-  slide3Main, slide3Text,
+  slide3Main, slide3Text, slide3Vs,
   slide4Main, slide4Text,
   slide5Headline, slide5Subtext, slide5Timer,
 } as const;
