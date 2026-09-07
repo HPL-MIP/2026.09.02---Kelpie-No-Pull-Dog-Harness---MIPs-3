@@ -17,10 +17,17 @@ export const CAROUSEL_LAYOUT = {
   sceneCount: 6,
   ctaPulse: { scale: 1.3, duration: 650, hold: 0 },
   logo: { x: 540, y: 154, width: 556, height: 80 },
-  // bottomOffset keeps the design anchored to the viewport's bottom edge.
-  lowerDesign: { x: 540, width: 1080, height: 187, bottomOffset: 0 },
   cta: { x: 540, y: 1735, width: 551, height: 155 },
   offerHeader: { textX: 540, textY: 360, dateY: 500, timerY: 580 },
+  scene4: {
+    shield: { x: 540, y: 615 },
+    heading: { x: 540, y: 842 },
+    features: [
+      { icon: 'scene4Icon1', text: 'scene4Text1', iconX: 244, textX: 590, y: 1050 },
+      { icon: 'scene4Icon2', text: 'scene4Text2', iconX: 244, textX: 590, y: 1210 },
+      { icon: 'scene4Icon3', text: 'scene4Text3', iconX: 244, textX: 590, y: 1340 },
+    ],
+  },
   scene5Timer: { x: 540, y: 1420, digitsY: 1390 },
   arrow: { leftX: 96.5, rightX: 983.5, y: 960, width: 93, height: 93 },
   // Edit x/y to reposition Assets/Kelpie/handhint.png on the 1080x1920 canvas.
@@ -28,11 +35,11 @@ export const CAROUSEL_LAYOUT = {
 } as const;
 
 const IMAGE_SIZE: Record<AssetKey, readonly [number, number]> = {
-  cta: [551, 155], design: [1080, 187], handHint: [178, 182], leftArrow: [93, 93], logo: [556, 80], rightArrow: [93, 93],
+  bg: [2000, 2000], cta: [551, 155], handHint: [178, 182], leftArrow: [93, 93], logo: [556, 80], rightArrow: [93, 93],
   scene1Main: [765, 588], scene1Text: [802, 158], scene2Main: [747, 755], scene2Text: [899, 172], scene3Main: [747, 755],
   scene4Icon0: [298, 298], scene4Icon1: [91, 91], scene4Icon2: [101, 101], scene4Icon3: [94, 94], scene4Text0: [647, 77],
   scene4Text1: [437, 90], scene4Text2: [443, 35], scene4Text3: [477, 42], scene5Text: [976, 77],
-  scene5Timer: [665, 302], timerBackground: [174, 57],
+  scene4Background: [2000, 2000], scene5Timer: [665, 302],
 };
 
 type PositionedObject = Phaser.GameObjects.GameObject & { setPosition: (x: number, y: number) => unknown; setDisplaySize?: (width: number, height: number) => unknown; setFontSize?: (size: number) => unknown };
@@ -48,15 +55,6 @@ class LayoutGroup {
     const image = this.scene.add.image(0, 0, key).setDepth(depth);
     if (onPress) { image.setInteractive({ useHandCursor: true }); image.on('pointerdown', onPress); }
     (image as any).layout = (offset: number) => image.setPosition(sx(x) + offset, sy(y)).setDisplaySize(sd(width), sd(height));
-    this.objects.push(image);
-    return image;
-  }
-  protected addBottomImage(key: AssetKey, x: number, bottomOffset: number, depth: number = Depth.Game): Phaser.GameObjects.Image {
-    const [width, height] = IMAGE_SIZE[key];
-    const image = this.scene.add.image(0, 0, key).setDepth(depth);
-    // Anchor to the physical viewport edge rather than the artboard's bottom
-    // so this decoration stays flush when the viewport aspect ratio changes.
-    (image as any).layout = (offset: number) => image.setPosition(sx(x) + offset, getViewport().height - sd(height) / 2 - sd(bottomOffset)).setDisplaySize(sd(width), sd(height));
     this.objects.push(image);
     return image;
   }
@@ -79,7 +77,6 @@ class SharedChrome extends LayoutGroup {
   constructor(scene: Phaser.Scene, audio: AudioController) {
     super(scene);
     this.addImage('logo', CAROUSEL_LAYOUT.logo.x, CAROUSEL_LAYOUT.logo.y, Depth.Hud);
-    this.addBottomImage('design', CAROUSEL_LAYOUT.lowerDesign.x, CAROUSEL_LAYOUT.lowerDesign.bottomOffset, Depth.Hud);
     const cta = this.addImage('cta', CAROUSEL_LAYOUT.cta.x, CAROUSEL_LAYOUT.cta.y, Depth.Input, () => { audio.unlock(); audio.playClick(); track('CTA_CLICKED'); triggerCTA(STORE_URL); });
     const { scale, duration, hold } = CAROUSEL_LAYOUT.ctaPulse;
     this.pulse = scene.tweens.addCounter({
@@ -98,7 +95,6 @@ class OfferHeader extends LayoutGroup {
     const { textX, textY, dateY, timerY } = CAROUSEL_LAYOUT.offerHeader;
     this.addImage('scene2Text', textX, textY, Depth.Hud);
     this.addDate(textX, dateY);
-    this.addImage('timerBackground', textX, timerY, Depth.Hud);
     const label = this.addText('00:15', textX, timerY + 1, 33);
     let remaining = CAROUSEL_LAYOUT.shortTimerSeconds;
     this.timer = scene.time.addEvent({ delay: 1000, repeat: remaining - 1, callback: () => { remaining--; label.setText(`00:${String(Math.max(0, remaining)).padStart(2, '0')}`); } });
@@ -224,7 +220,16 @@ class Slide extends LayoutGroup {
     if (this.index === 0) { this.addImage('scene1Text', 540, 435, Depth.Hud); this.addDate(540, 600); this.addImage('scene1Main', 540, 1052); return; }
     if (this.index === 1) { this.addImage('scene2Main', 540, 1040); return; }
     if (this.index === 2) { this.addImage('scene3Main', 540, 1040); return; }
-    if (this.index === 3) { this.addImage('scene4Icon0', 540, 410, Depth.Hud); this.addImage('scene4Text0', 540, 660, Depth.Hud); this.addImage('scene4Icon1', 244, 900, Depth.Hud); this.addImage('scene4Text1', 590, 900, Depth.Hud); this.addImage('scene4Icon2', 244, 1090, Depth.Hud); this.addImage('scene4Text2', 590, 1090, Depth.Hud); this.addImage('scene4Icon3', 244, 1280, Depth.Hud); this.addImage('scene4Text3', 590, 1280, Depth.Hud); return; }
+    if (this.index === 3) {
+      const { shield, heading, features } = CAROUSEL_LAYOUT.scene4;
+      this.addImage('scene4Icon0', shield.x, shield.y, Depth.Hud);
+      this.addImage('scene4Text0', heading.x, heading.y, Depth.Hud);
+      for (const feature of features) {
+        this.addImage(feature.icon, feature.iconX, feature.y, Depth.Hud);
+        this.addImage(feature.text, feature.textX, feature.y, Depth.Hud);
+      }
+      return;
+    }
     if (this.index === 4) { this.addImage('scene5Text', 540, 366, Depth.Hud); this.addImage('scene1Main', 540, 925); this.addLongTimer(); }
   }
 }
@@ -242,7 +247,7 @@ export class Carousel {
   private currentIndex = 0;
   private busy = false;
   private downX = 0;
-  constructor(private readonly scene: Phaser.Scene, private readonly audio: AudioController) {
+  constructor(private readonly scene: Phaser.Scene, private readonly audio: AudioController, private readonly onSlideChanged: (index: number) => void) {
     this.endcard = new EndcardOverlay(() => this.audio.playEnd());
     this.chrome = new SharedChrome(scene, audio);
     this.navigation = new Navigation(scene, (direction) => this.move(direction), audio);
@@ -292,6 +297,7 @@ export class Carousel {
   }
   private show(next: number, direction: -1 | 0 | 1): void {
     const shouldFadeInOfferHeader = this.syncOfferHeader(next);
+    this.onSlideChanged(next);
     this.navigation.setIndex(next);
     this.tutorial?.refreshTarget();
     const incoming = new Slide(this.scene, next);

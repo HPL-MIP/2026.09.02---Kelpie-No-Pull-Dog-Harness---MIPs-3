@@ -1,5 +1,6 @@
 export const DESIGN_WIDTH = 1080;
 export const DESIGN_HEIGHT = 1920;
+export const SCENE_BACKGROUND_FADE_MS = 480;
 // Leave empty until a final store destination is supplied.
 export const STORE_URL = '';
 

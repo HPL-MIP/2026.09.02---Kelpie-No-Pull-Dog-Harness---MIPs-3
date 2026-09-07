@@ -1,5 +1,6 @@
 import cta from '../Assets/Kelpie/cta.png';
-import design from '../Assets/Kelpie/design.png';
+import bg from '../Assets/Kelpie/bg-runtime.webp';
+import scene4Background from '../Assets/Kelpie/bg_scene4-runtime.webp';
 import handHint from '../Assets/Kelpie/handhint.png';
 import leftArrow from '../Assets/Kelpie/left_arrow.png';
 import logo from '../Assets/Kelpie/logo.png';
@@ -19,16 +20,15 @@ import scene4Text2 from '../Assets/Kelpie/scene4_text2.png';
 import scene4Text3 from '../Assets/Kelpie/scene4_text3.png';
 import scene5Text from '../Assets/Kelpie/scene5_text.png';
 import scene5Timer from '../Assets/Kelpie/scene5_timer.png';
-import timerBackground from '../Assets/Kelpie/timer_bg.png';
 import endcardHtml from 'virtual:kelpie-endcard';
 import clickSfx from 'virtual:kelpie-click-sfx';
 import endSfx from '../Assets/Kelpie/sfx/end.mp3';
 
 export const Assets = {
-  cta, design, handHint, leftArrow, logo, rightArrow, scene1Main, scene1Text,
+  bg, cta, handHint, leftArrow, logo, rightArrow, scene1Main, scene1Text,
   scene2Main, scene2Text, scene3Main, scene4Icon0, scene4Icon1, scene4Icon2,
   scene4Icon3, scene4Text0, scene4Text1, scene4Text2, scene4Text3,
-  scene5Text, scene5Timer, timerBackground,
+  scene4Background, scene5Text, scene5Timer,
 } as const;
 
 export { endcardHtml };
