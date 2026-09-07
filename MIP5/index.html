@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+    <script src="mraid.js"></script>
+    <script>
+      (function () {
+        let mraidIsReady = false;
+        let mraidReadyListenerAttached = false;
+        function trackMraidReadiness(mraid) {
+          if (mraidReadyListenerAttached || !mraid || typeof mraid.addEventListener !== 'function') return;
+          try { mraid.addEventListener('ready', function () { mraidIsReady = true; }); mraidReadyListenerAttached = true; } catch (error) {}
+        }
+        window.trackMraidReadiness = trackMraidReadiness;
+        window.isMraidUsable = function isMraidUsable(mraid) {
+          if (!mraid) return false;
+          trackMraidReadiness(mraid);
+          if (typeof mraid.getState !== 'function') return true;
+          try { const state = mraid.getState(); return state === 'default' || state === 'expanded'; } catch (error) { return mraidIsReady; }
+        };
+        window.handleClickAction = function handleClickAction() {
+          const mraid = window.mraid || {};
+          const clickTarget = window.clickTag || window.clickTag1 || window.clickthrough || window.clickThrough || '';
+          if (typeof mraid.open === 'function' && window.isMraidUsable(mraid)) {
+            try { if (clickTarget) mraid.open(clickTarget); else mraid.open(); return; } catch (error) {}
+          }
+          window.open(clickTarget || 'about:blank', '_blank', 'noopener');
+        };
+        let mraidViewable = true;
+        let mraidStateVisible = true;
+        let mraidExposed = true;
+        function syncMediaState() {
+          const mediaAllowed = mraidViewable && mraidStateVisible && mraidExposed && !document.hidden;
+          const sync = function (element, allowed) {
+            if (!allowed) {
+              element.pause();
+            } else if (element.tagName === 'VIDEO' && element.autoplay) {
+              element.play().catch(function () {});
+            }
+          };
+          document.querySelectorAll('video, audio').forEach(function (element) {
+            sync(element, mediaAllowed);
+          });
+          document.querySelectorAll('iframe').forEach(function (frame) {
+            try {
+              const child = frame.contentWindow;
+              if (child && typeof child.setSipHostMediaAllowed === 'function') {
+                child.setSipHostMediaAllowed(mediaAllowed);
+                return;
+              }
+              const iframeAllowed = mediaAllowed && frame.dataset.presentationActive === 'true';
+              frame.contentDocument?.querySelectorAll('video, audio').forEach(function (element) {
+                sync(element, iframeAllowed);
+              });
+            } catch (error) {}
+          });
+          window.dispatchEvent(new Event('mraidlifecyclechange'));
+        }
+        document.addEventListener('visibilitychange', syncMediaState);
+        window.syncMraidMediaState = syncMediaState;
+        window.setupMraidViewability = function setupMraidViewability() {
+          if (typeof mraid === 'undefined') return;
+          function handleViewableChange(viewable) {
+            mraidViewable = Boolean(viewable);
+            syncMediaState();
+          }
+          function handleStateChange(state) {
+            mraidStateVisible = state !== 'hidden';
+            syncMediaState();
+          }
+          function handleExposureChange(exposure) {
+            if (typeof exposure !== 'number') return;
+            mraidExposed = exposure > 0;
+            syncMediaState();
+          }
+          if (typeof mraid.getState === 'function') {
+            try { mraidStateVisible = mraid.getState() !== 'hidden'; } catch (error) { mraidStateVisible = true; }
+          }
+          if (typeof mraid.isViewable === 'function') {
+            try { mraidViewable = Boolean(mraid.isViewable()); } catch (error) { mraidViewable = true; }
+          }
+          if (typeof mraid.addEventListener === 'function') {
+            try {
+              mraid.addEventListener('viewableChange', handleViewableChange);
+              mraid.addEventListener('stateChange', handleStateChange);
+              mraid.addEventListener('exposureChange', handleExposureChange);
+            } catch (error) {}
+          }
+          syncMediaState();
+        };
+        let creativeInitialized = false;
+        function init() {
+          if (creativeInitialized) return;
+          creativeInitialized = true;
+          mraidIsReady = true;
+        }
+        if (typeof mraid === 'undefined') {
+          init();
+        } else {
+          if (mraid.getState() === "loading") {
+            mraid.addEventListener("ready", init);
+          } else {
+            init();
+          }
+        }
+      })();
+    </script>
+    <title>Kelpie MIP-5 Tiltflow 3</title>
+    <style>html,body,#game,canvas{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;touch-action:none}</style>
+  </head>
+  <body>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

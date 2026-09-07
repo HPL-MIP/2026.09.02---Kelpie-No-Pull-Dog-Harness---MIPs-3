@@ -21,8 +21,8 @@ const SIZE_LIMIT = 5 * 1024 * 1024;
 const MIN_IMAGE_SIDE = 28;
 
 // core/Config.js — the `images.white` default, a 4x4 solid white loaded as the
-// __WHITE texture that WebGL binds for untextured geometry. Replaced with the
-// same solid white at 32x32, which samples identically.
+// __WHITE texture WebGL binds for untextured geometry. Replaced with the same
+// solid white at 32x32, which samples identically.
 const PHASER_WHITE_4X4 =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAABdJREFUeNpi/P//PwMMMDEgAdwcgAADAJZuAwXJYZOzAAAAAElFTkSuQmCC';
 const WHITE_32X32 =
@@ -46,20 +46,19 @@ function pngSize(buffer) {
 /** Every `data:image/*;base64,…` literal, bounded by its enclosing quote. */
 function findDataUris(html) {
   const found = [];
-  const needle = /data:image\/[a-z+]+;base64,/g;
-  for (const match of html.matchAll(needle)) {
+  for (const match of html.matchAll(/data:image\/[a-z+]+;base64,/g)) {
     const start = match.index;
     const quote = html[start - 1];
     const end = quote === '"' || quote === "'" ? html.indexOf(quote, start) : html.indexOf(')', start);
     if (end === -1) continue;
-    found.push({ uri: html.slice(start, end), payload: html.slice(start + match[0].length, end) });
+    found.push(html.slice(start + match[0].length, end));
   }
   return found;
 }
 
 function undersizedImages(html) {
   return findDataUris(html)
-    .map(({ payload }) => pngSize(Buffer.from(payload, 'base64')))
+    .map((payload) => pngSize(Buffer.from(payload, 'base64')))
     .filter((size) => size && (size[0] < MIN_IMAGE_SIDE || size[1] < MIN_IMAGE_SIDE));
 }
 

@@ -25,14 +25,25 @@ const devMraidPlaceholder: Plugin = {
   },
 };
 
-async function minifyEndcardHtml(source: string, sharedFontDataUrl: string): Promise<string> {
+// `standalone` builds the SIP deliverable rather than the copy the MIP embeds
+// in an iframe. It keeps the mraid.js bridge (the SIP is the top-level document)
+// and leaves the JS unminified, because AppLovin's validator greps the output
+// for literal `function handleClickAction()`, `trackMraidReadiness(mraid)` and
+// `mraid.open(clickTarget)` — esbuild renames all three. The end card's scripts
+// are a few KB against ~2.1 MB of embedded video, so this costs nothing.
+async function minifyEndcardHtml(source: string, sharedFontDataUrl: string, standalone = false): Promise<string> {
+  const keepMraidBridge = standalone;
   const hasDisabledDateOverlay = /const dateTokens\s*=\s*["']\s*["']/.test(source);
   const dateFontPayload = source.match(/@font-face\s*\{\s*font-family:\s*"SipDateFont";[\s\S]*?url\(([^)]*)\)/i)?.[1];
   const customFontPayload = source.match(/@font-face\s*\{\s*font-family:\s*"SipCustom1Font";[\s\S]*?url\(([^)]*)\)/i)?.[1];
   let html = source
-    .replace(/<script src="mraid\.js"><\/script>\s*/i, '')
     .replace(/\s*<script id="sip-builder-config"[\s\S]*?<\/script>/i, '')
     .replace(/<!--[^]*?-->/g, '');
+
+  // The MIP embeds this end card in an iframe whose parent page already
+  // declares the bridge, so that copy must not declare a second one. The
+  // standalone SIP creative is the top-level document and must keep its own.
+  if (!keepMraidBridge) html = html.replace(/<script src="mraid\.js"><\/script>\s*/i, '');
 
   // end.html embeds this exact Bricolage font twice. Both overlays can share
   // SipDateFont, saving the duplicate base64 payload without changing glyphs.
@@ -61,6 +72,17 @@ async function minifyEndcardHtml(source: string, sharedFontDataUrl: string): Pro
     return `<style>${result.code}</style>`;
   });
 
+  if (standalone) {
+    // end.html writes the loading guard single-quoted. AGENTS_WEB.md requires
+    // the double-quoted form, which esbuild used to produce as a side effect of
+    // minifying; now that the SIP ships unminified, normalise it explicitly.
+    html = html.replace(/getState\(\)\s*===\s*'loading'/g, 'getState() === "loading"');
+
+    // Leave the JS and the inter-tag whitespace alone: the `>\s+<` collapse can
+    // reach inside an unminified script and mangle a comparison across lines.
+    return html.trim();
+  }
+
   html = await replaceAsync(html, /<script>([^]*?)<\/script>/gi, async (_match, script: string) => {
     const result = await transform(script, { loader: 'js', minify: true, legalComments: 'none' });
     return `<script>${result.code}</script>`;
@@ -80,6 +102,12 @@ async function replaceAsync(
   return source.replace(expression, () => replacements[index++]);
 }
 
+async function buildEndcard(keepMraidBridge: boolean): Promise<string> {
+  const source = await readFile(resolve('Assets/Kelpie/end.html'), 'utf8');
+  const font = await readFile(resolve('node_modules/@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2'));
+  return minifyEndcardHtml(source, `data:font/woff2;base64,${font.toString('base64')}`, keepMraidBridge);
+}
+
 const inlineEndcard: Plugin = {
   name: 'inline-minified-kelpie-endcard',
   resolveId(id) {
@@ -93,13 +121,18 @@ const inlineEndcard: Plugin = {
       const trimmed = trimMp3(click, 20);
       return `export default ${JSON.stringify(`data:audio/mpeg;base64,${trimmed.toString('base64')}`)};`;
     }
-    if (id === '\0virtual:kelpie-endcard') {
-      const source = await readFile(resolve('Assets/Kelpie/end.html'), 'utf8');
-      const font = await readFile(resolve('node_modules/@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2'));
-      const fontDataUrl = `data:font/woff2;base64,${font.toString('base64')}`;
-      return `export default ${JSON.stringify(await minifyEndcardHtml(source, fontDataUrl))};`;
-    }
+    if (id === '\0virtual:kelpie-endcard') return `export default ${JSON.stringify(await buildEndcard(false))};`;
     return null;
+  },
+};
+
+// The end scene also ships on its own as the SIP creative. finalize-build.mjs
+// gives this its final kelpie_..._sip_... filename alongside the MIP.
+const emitSipEndcard: Plugin = {
+  name: 'emit-sip-endcard',
+  apply: 'build' as const,
+  async closeBundle() {
+    await writeFile(resolve('dist/endcard.sip.html'), await buildEndcard(true));
   },
 };
 
@@ -130,7 +163,7 @@ function trimMp3(source: Buffer, frameLimit: number): Buffer {
 }
 
 export default defineConfig({
-  plugins: [inlineEndcard, viteSingleFile(), applovinHtml, devMraidPlaceholder],
+  plugins: [inlineEndcard, viteSingleFile(), applovinHtml, emitSipEndcard, devMraidPlaceholder],
   build: {
     assetsInlineLimit: 10_000_000,
     cssCodeSplit: false,
